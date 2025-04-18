@@ -1,0 +1,69 @@
+@startuml
+
+package dto {
+  class SensorDataDTO {
+    +String sensorId
+    +String metric
+    +double value
+    +Instant timestamp
+  }
+  class ThresholdDTO {
+    +String sensorId
+    +double min
+    +double max
+    +boolean userDefined
+  }
+}
+
+package domain {
+  class Threshold {
+    +String sensorId
+    +String metric
+    +double min
+    +double max
+    +boolean userDefined
+  }
+  class Alert {
+    +UUID id
+    +String sensorId
+    +String metric
+    +double value
+    +Instant timestamp
+    +String message
+  }
+}
+
+package service {
+  class MqttIngestionService {
+    +void onMessage(SensorDataDTO)
+  }
+  class RuleEngineService {
+    +boolean evaluate(SensorDataDTO)
+  }
+  class ThresholdCacheManager {
+    +Threshold getThreshold(String)
+    +void updateThreshold(Threshold)
+  }
+  class InfluxWriteService {
+    +void write(SensorDataDTO)
+  }
+  class AlertService {
+    +void sendAlert(Alert)
+  }
+}
+
+package controller {
+  class ThresholdController {
+    +Threshold getThreshold(String)
+    +void updateThreshold(String, Threshold)
+  }
+}
+
+' 관계
+MqttIngestionService --> RuleEngineService
+RuleEngineService --> ThresholdCacheManager
+RuleEngineService --> InfluxWriteService
+RuleEngineService --> AlertService
+ThresholdController --> ThresholdCacheManager
+
+@enduml
