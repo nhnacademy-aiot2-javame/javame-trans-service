@@ -71,7 +71,7 @@ public class MqttIngestionService {
             if (payload.split(",").length < 3) {
                 String sensorId = extractSensorId(topic);
                 Threshold threshold = thresholdCacheManager.getThreshold(sensorId, sensorType);
-                String sensorValue = payload.split(":")[3];
+                String sensorValue = payload.split(":")[2];
                 boolean isTriggered = ruleEngine.evaluate( sensorValue, threshold);
 
                 if (isTriggered) {
