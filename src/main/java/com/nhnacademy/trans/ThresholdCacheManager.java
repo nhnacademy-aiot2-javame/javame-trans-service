@@ -11,8 +11,8 @@ public class ThresholdCacheManager {
 
     private final Map<String, Threshold> cache = new ConcurrentHashMap<>();
 
-    public Threshold getThreshold(String sensorId) {
-        return cache.getOrDefault(sensorId, new Threshold(sensorId, 0, 100)); // 기본값
+    public Threshold getThreshold(String sensorId,String sensorType) {
+        return cache.getOrDefault(sensorId+sensorType, new Threshold(sensorId,"type", 0, 100)); // 기본값
     }
 
     public void updateThreshold(String sensorId, Threshold threshold) {

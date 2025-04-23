@@ -5,5 +5,5 @@ import com.nhnacademy.trans.domain.Threshold;
 import org.springframework.stereotype.Component;
 
 public interface RuleEngine {
-    boolean evaluate(SensorData data, Threshold threshold);
+    boolean evaluate(String data, Threshold threshold);
 }

@@ -1,11 +1,8 @@
 package com.nhnacademy.trans;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hivemq.client.mqtt.MqttClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
 import com.hivemq.client.mqtt.mqtt3.message.publish.Mqtt3Publish;
-import com.nhnacademy.trans.domain.SensorData;
 import com.nhnacademy.trans.domain.Threshold;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +24,7 @@ public class MqttIngestionService {
     private String serverHost;
 
     private final RuleEngine ruleEngine;
+    private final InfluxDBService influxDBService;
     private final ThresholdCacheManager thresholdCacheManager;
 
     private Mqtt3AsyncClient client;
@@ -50,7 +48,7 @@ public class MqttIngestionService {
                     }
 
                     client.subscribeWith()
-                            .topicFilter("#")
+                            .topicFilter("data/s/+/b/+/p/server_room/#")
                             .callback(this::handleMessage)
                             .send();
                 });
@@ -63,24 +61,44 @@ public class MqttIngestionService {
 
             log.info("topic: {}, payload: {}", topic, payload);
 
-            SensorData data = parse(payload);
-            Threshold threshold = thresholdCacheManager.getThreshold(data.getSensorId());
+            // 센서 타입 파싱
+            String sensorType = extractSensorType(topic);
 
-            boolean isTriggered = ruleEngine.evaluate(data, threshold);
+            // 파싱된 센서 데이터
 
-            if (isTriggered) {
-                log.warn("임계값 초과: {}", data);
-                // 알람 발송 or 처리
+
+            // 3. value가 단일 숫자인지 확인
+            if (payload.split(",").length < 3) {
+                String sensorId = extractSensorId(topic);
+                Threshold threshold = thresholdCacheManager.getThreshold(sensorId, sensorType);
+                String sensorValue = payload.split(":")[3];
+                boolean isTriggered = ruleEngine.evaluate( sensorValue, threshold);
+
+                if (isTriggered) {
+                    log.warn("임계값 초과 알림: {}, value={}", sensorType, sensorValue);
+                    // 알림 전송(Warnify service 호출)
+                }
             }
 
-            // InfluxDB 저장 로직
+            // Influx 저장은 모든 경우에 처리
+            influxDBService.save(topic,payload);
+
         } catch (Exception e) {
             log.error("MQTT 메시지 처리 중 오류", e);
         }
     }
 
-    private SensorData parse(String payload) throws JsonProcessingException {
-        ObjectMapper mapper = new ObjectMapper();
-        return mapper.readValue(payload, SensorData.class);
+    private String extractSensorId(String topic) {
+        // /g/ 다음으로 오는 문자열 '/' 전 까지 리턴
+        return topic.contains("/g/") ? topic.split("/g/")[1].split("/")[0] : "UNKNOWN";
     }
+
+
+
+    private String extractSensorType(String topic) {
+        return topic.substring(topic.lastIndexOf('/') + 1);
+    }
+
+
+
 }

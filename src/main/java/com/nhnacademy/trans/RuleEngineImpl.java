@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class RuleEngineImpl implements RuleEngine {
     @Override
-    public boolean evaluate(SensorData data, Threshold threshold) {
+    public boolean evaluate(String data, Threshold threshold) {
         return true;
     }
 }
