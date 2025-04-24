@@ -48,7 +48,7 @@ public class MqttIngestionService {
                     }
 
                     client.subscribeWith()
-                            .topicFilter("data/s/+/b/+/p/server_room/#")
+                            .topicFilter("+/s/+/b/+/p/server_room/#")
                             .callback(this::handleMessage)
                             .send();
                 });

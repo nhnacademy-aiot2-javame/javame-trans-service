@@ -41,7 +41,8 @@ public class InfluxDBService {
         String serverId      = map.get("d");
         String location      = map.get("n");
         String gatewayId     = map.get("g");      // g가 없으면 null
-        String measurement   = map.get("e");      // 반드시 있어야 함
+        String measurement   = map.get("e");// 반드시 있어야 함
+        String origin = tokens[0].equals("date")?"sensor_data":"server_data";
 
         // 3. Point 생성 (value가 primitive vs object 구분)
         WriteApiBlocking writeApi = influxDBClient.getWriteApiBlocking();
@@ -54,7 +55,8 @@ public class InfluxDBService {
                         .addTag("building", building)
                         .addTag("place", place)
                         .addTag("serverId", serverId)
-                        .addTag("location", location);
+                        .addTag("location", location)
+                        .addTag("origin",origin);
                 if (gatewayId!=null) p.addTag("gatewayId", gatewayId);
 
                 // 숫자면 double, 아니면 text
@@ -75,7 +77,8 @@ public class InfluxDBService {
                     .addTag("building", building)
                     .addTag("place", place)
                     .addTag("serverId", serverId)
-                    .addTag("location", location);
+                    .addTag("location", location)
+                    .addTag("origin", origin);
             if (gatewayId!=null) p.addTag("gatewayId", gatewayId);
 
             p.addField("value", value)
