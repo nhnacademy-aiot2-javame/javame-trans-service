@@ -1,4 +1,4 @@
-package com.nhnacademy.trans;
+package com.nhnacademy.trans.config;
 
 import com.influxdb.client.InfluxDBClient;
 import com.influxdb.client.InfluxDBClientFactory;
