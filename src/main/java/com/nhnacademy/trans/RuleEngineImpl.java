@@ -8,6 +8,6 @@ import org.springframework.stereotype.Component;
 public class RuleEngineImpl implements RuleEngine {
     @Override
     public boolean evaluate(String data, Threshold threshold) {
-        return true;
+        return false;
     }
 }
