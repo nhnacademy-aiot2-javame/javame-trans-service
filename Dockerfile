@@ -4,7 +4,7 @@ LABEL authors="goni"
 ENTRYPOINT ["top", "-b"]
 
 # 1. Use an official OpenJDK runtime as the base image
-FROM openjdk:17-jdk-slim
+FROM openjdk:21-jdk-slim
 
 # 2. Set the working directory inside the container
 WORKDIR /app
