@@ -44,8 +44,8 @@ jobs:
       # Build and push Docker image
       - name: Build and push Docker image
         run: |
-          docker build -t javame-trans-service/spring-app:latest .
-          docker push javame-trans-service/spring-app:latest
+          docker build -t janggon/javame-trans-service:latest .
+          docker push janggon/javame-trans-service:latest
 
       # Deploy the application using Docker-Compose
       - name: Deploy with Docker-Compose
