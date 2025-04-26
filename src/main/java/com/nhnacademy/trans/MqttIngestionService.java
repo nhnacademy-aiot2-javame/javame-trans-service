@@ -1,5 +1,6 @@
 package com.nhnacademy.trans;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hivemq.client.mqtt.MqttClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
 import com.hivemq.client.mqtt.mqtt3.message.publish.Mqtt3Publish;
@@ -11,6 +12,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +29,7 @@ public class MqttIngestionService {
     private final RuleEngine ruleEngine;
     private final InfluxDBService influxDBService;
     private final ThresholdCacheManager thresholdCacheManager;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private Mqtt3AsyncClient client;
 
@@ -64,11 +68,19 @@ public class MqttIngestionService {
             // 센서 타입 파싱
             String sensorType = extractSensorType(topic);
 
-            // 파싱된 센서 데이터
 
 
             // 3. value가 단일 숫자인지 확인
-            if (payload.split(",").length < 3) {
+            if (payload.split(",").length == 1){
+                Map<String, Object> payloadMap = new HashMap<>();
+                payloadMap.put("time", System.currentTimeMillis());
+                payloadMap.put("value", payload);
+                String json = objectMapper.writeValueAsString(payloadMap);
+                // Influx 저장은 모든 경우에 처리
+                log.info("payloadMap: {}", payloadMap);
+                influxDBService.save(topic,json);
+            }
+            else {
                 String sensorId = extractSensorId(topic);
                 Threshold threshold = thresholdCacheManager.getThreshold(sensorId, sensorType);
                 String sensorValue = payload.split(":")[2];
@@ -78,10 +90,11 @@ public class MqttIngestionService {
                     log.warn("임계값 초과 알림: {}, value={}", sensorType, sensorValue);
                     // 알림 전송(Warnify service 호출)
                 }
+                // Influx 저장은 모든 경우에 처리
+                influxDBService.save(topic,payload);
             }
 
-            // Influx 저장은 모든 경우에 처리
-            influxDBService.save(topic,payload);
+
 
         } catch (Exception e) {
             log.error("MQTT 메시지 처리 중 오류", e);

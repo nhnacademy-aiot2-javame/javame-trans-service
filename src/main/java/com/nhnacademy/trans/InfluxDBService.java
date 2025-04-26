@@ -54,7 +54,7 @@ public class InfluxDBService {
                         .addTag("companyDomain", companyDomain)
                         .addTag("building", building)
                         .addTag("place", place)
-                        .addTag("device_Id", deviceId)
+                        .addTag("device_id", deviceId)
                         .addTag("location", location)
                         .addTag("origin",origin);
                 if (gatewayId!=null) p.addTag("gatewayId", gatewayId);
