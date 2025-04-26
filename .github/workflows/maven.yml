@@ -48,10 +48,14 @@ jobs:
           docker push janggon/javame-trans-service:latest
 
       # Deploy the application using Docker-Compose
-      - name: Deploy with Docker-Compose
-        run: |
-          ssh -o StrictHostKeyChecking=no -p 8822 ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} << EOF
-            cd /home/aiot2/aiot2-team3/docker
-            docker-compose pull
-            docker-compose up -d
-          EOF
+      - name: Deploy to Remote Server via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+            host: ${{ secrets.REMOTE_HOST }}
+            username: ${{ secrets.REMOTE_USER }}
+            port: 8822
+            key: ${{ secrets.PRIVATE_KEY }}
+            script: |
+              cd /home/aiot2/aiot2-team3/docker
+              docker-compose pull
+              docker-compose up -d
