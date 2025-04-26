@@ -11,7 +11,7 @@ WORKDIR /app
 
 # 3. Copy the built JAR file into the container
 # Make sure to replace 'javame-trans-service.jar' with your actual Spring Boot JAR file name
-COPY target/javame-trans-service.jar javame-trans-service.jar
+COPY target/*.jar javame-trans-service.jar
 
 # 4. Expose the port your Spring Boot app runs on
 EXPOSE 10284
