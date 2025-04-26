@@ -58,4 +58,5 @@ jobs:
             script: |
               cd /home/aiot2/aiot2-team3/docker
               docker-compose pull javame-trans-service
-              docker-compose up -d --force-recreate javame-trans-service
+              docker-compose down javame-trans-service
+              docker-compose up -d javame-trans-service
