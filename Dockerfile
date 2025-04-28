@@ -1,4 +1,4 @@
-
+FROM ubuntu:latest
 LABEL authors="goni"
 
 ENTRYPOINT ["top", "-b"]
