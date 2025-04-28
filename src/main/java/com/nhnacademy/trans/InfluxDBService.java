@@ -22,7 +22,7 @@ public class InfluxDBService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public void save(String topic, String payload) throws Exception {
-        // 1. payload
+        // 1. payload test
         JsonNode root = objectMapper.readTree(payload);
         long time = root.get("time").asLong();
         JsonNode valueNode = root.get("value");
