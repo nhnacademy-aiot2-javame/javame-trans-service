@@ -42,8 +42,8 @@ jobs:
       - name: Build & Push Docker Image
         run: |
             IMAGE_TAG=${{ github.sha }}
-            docker build -t ${{ secrets.DOCKER_USERNAME }}/javame-trans-service:$IMAGE_TAG .
-            docker push ${{ secrets.DOCKER_USERNAME }}/javame-trans-service:$IMAGE_TAG
+            docker build -t janggon/javame-trans-service:$IMAGE_TAG .
+            docker push janggon/javame-trans-service:$IMAGE_TAG
             echo "TRANS_IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
       # Deploy the application using Docker-Compose
