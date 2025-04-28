@@ -5,20 +5,17 @@ on:
     branches:
       - main
   pull_request:
+    branches:
+      - main
+
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      SERVICE_NAME: javame-trans-service
 
     steps:
-      - name: Debug Secrets
-        run: |
-         if [ -z "${{ secrets.DOCKER_USERNAME }}" ]; then
-         echo "DOCKER_USERNAME is empty"
-         exit 1
-         else
-         echo "DOCKER_USERNAME is set"
-         fi
       # Checkout the repository
       - name: Checkout code
         uses: actions/checkout@v3
@@ -42,10 +39,12 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       # Build and push Docker image
-      - name: Build and push Docker image
+      - name: Build & Push Docker Image
         run: |
-          docker build -t janggon/javame-trans-service:latest .
-          docker push janggon/javame-trans-service:latest
+            IMAGE_TAG=${{ github.sha }}
+            docker build -t ${{ secrets.DOCKER_USERNAME }}/javame-trans-service:$IMAGE_TAG .
+            docker push ${{ secrets.DOCKER_USERNAME }}/javame-trans-service:$IMAGE_TAG
+            echo "TRANS_IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
       # Deploy the application using Docker-Compose
       - name: Deploy to Remote Server via SSH
@@ -56,7 +55,21 @@ jobs:
             port: 8822
             key: ${{ secrets.PRIVATE_KEY }}
             script: |
-              cd /home/aiot2/aiot2-team3/docker
-              docker-compose pull javame-trans-service
-              docker-compose down javame-trans-service
-              docker-compose up -d javame-trans-service
+              COMPOSE_DIR="/home/aiot2/aiot2-team3/docker/javame"
+              cd $COMPOSE_DIR
+              
+              # ① .env에 방금 빌드한 이미지 태그 기록
+              echo "TRANS_IMAGE_TAG=${{ env.TRANS_IMAGE_TAG }}" > .env
+              
+              RUNNING=$(docker-compose ps -q $SERVICE_NAME)
+              
+              if [ -n "$RUNNING" ]; then
+                echo "$SERVICE_NAME is running → stop & rm & up only this service"
+                docker-compose stop $SERVICE_NAME
+                docker-compose rm -f $SERVICE_NAME
+                docker-compose up -d $SERVICE_NAME
+              else
+                echo "$SERVICE_NAME is not running → full restart"
+                docker-compose down
+                docker-compose up -d
+              fi
