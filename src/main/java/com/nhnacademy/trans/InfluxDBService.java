@@ -69,6 +69,7 @@ public class InfluxDBService {
                 points.add(p);
             });
             writeApi.writePoints(points);
+            //test
         } else {
             // humidity, temperature 처럼 단일 값
             double value = valueNode.asDouble();
