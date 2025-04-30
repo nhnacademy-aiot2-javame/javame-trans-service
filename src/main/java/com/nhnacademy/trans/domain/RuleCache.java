@@ -8,7 +8,6 @@ import java.util.Map;
 @Getter
 public class RuleCache {
     private String id;  // sensorId or serverIp
-    private String type; // "sensor" or "server"
     private Map<String, Threshold> rules; // 예: temperature → min/max
 
 }
