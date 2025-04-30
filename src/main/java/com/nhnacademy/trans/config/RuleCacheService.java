@@ -17,8 +17,6 @@ import java.util.*;
 @Service
 public class RuleCacheService {
 
-    private final SensorDataRepository sensorDataRepository;
-    private final ServerDataRepository serverDataRepository;
     private final RedisTemplate<String, Object> redisTemplate;
     private final HashOperations<String, String, Threshold> hashOperations;
 

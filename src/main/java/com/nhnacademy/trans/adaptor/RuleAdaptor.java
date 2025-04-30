@@ -4,4 +4,5 @@ import org.springframework.cloud.openfeign.FeignClient;
 
 @FeignClient(name = "rule-api")
 public interface RuleAdaptor {
+
 }
