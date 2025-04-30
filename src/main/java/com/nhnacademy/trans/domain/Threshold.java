@@ -8,8 +8,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Threshold {
-    private String sensorId;
-    private String type;
     private double min;
     private double max;
 }
