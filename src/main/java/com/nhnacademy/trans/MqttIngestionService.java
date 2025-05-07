@@ -65,35 +65,31 @@ public class MqttIngestionService {
 
             log.info("topic: {}, payload: {}", topic, payload);
 
-            // 센서 타입 파싱
-            String sensorType = extractSensorType(topic);
-
+            // 데이터 타입 파싱
+            String type = extractDataType(topic);
+            String companyDomain = extractCompanyDomain(topic);
 
 
             // 3. value가 단일 숫자인지 확인
-            if (payload.split(",").length == 1){
+            if (payload.split(",").length == 1) {
                 Map<String, Object> payloadMap = new HashMap<>();
                 payloadMap.put("time", System.currentTimeMillis());
                 payloadMap.put("value", payload);
-                String json = objectMapper.writeValueAsString(payloadMap);
-                // Influx 저장은 모든 경우에 처리
-                log.info("payloadMap: {}", payloadMap);
-                influxDBService.save(topic,json);
-            }
-            else {
-                String sensorId = extractSensorId(topic);
-                Threshold threshold = thresholdCacheManager.getThreshold(sensorId, sensorType);
-                String sensorValue = payload.split(":")[2];
-                boolean isTriggered = ruleEngine.evaluate( sensorValue, threshold);
-
-                if (isTriggered) {
-                    log.warn("임계값 초과 알림: {}, value={}", sensorType, sensorValue);
-                    // 알림 전송(Warnify service 호출)
-                }
-                // Influx 저장은 모든 경우에 처리
-                influxDBService.save(topic,payload);
+                payload = objectMapper.writeValueAsString(payloadMap);
             }
 
+            String sensorId = extractSensorId(topic);
+            Threshold threshold = thresholdCacheManager.getThreshold(type, companyDomain, sensorId);
+            String sensorValue = payload.split(":")[2];
+
+            boolean isTriggered = ruleEngine.evaluate(sensorValue, threshold);
+
+            if (isTriggered) {
+                log.warn("임계값 초과 알림: {}, value={}", type, sensorValue);
+                // 알림 전송(Warnify service 호출)
+            }
+            // Influx 저장은 모든 경우에 처리
+            influxDBService.save(topic, payload);
 
 
         } catch (Exception e) {
@@ -107,11 +103,16 @@ public class MqttIngestionService {
     }
 
 
-
-    private String extractSensorType(String topic) {
+    private String extractDataType(String topic) {
         return topic.substring(topic.lastIndexOf('/') + 1);
     }
 
+    // companyDomain 추출 헬퍼 메서드 추가
+    private String extractCompanyDomain(String topic) {
+        // topic 예시: "data/s/myDomain/b/../..."
+        String[] tokens = topic.split("/");
+        return tokens.length > 2 ? tokens[2] : "UNKNOWN";
+    }
 
 
 }
