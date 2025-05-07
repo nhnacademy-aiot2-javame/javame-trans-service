@@ -1,13 +1,15 @@
 package com.nhnacademy.trans.domain;
 
 import lombok.Getter;
-import org.springframework.data.redis.core.RedisHash;
+import lombok.RequiredArgsConstructor;
+
 import java.util.Map;
 
-@RedisHash("rule")
 @Getter
+@RequiredArgsConstructor
 public class RuleCache {
-    private String id;  // sensorId or serverIp
-    private Map<String, Threshold> rules; // 예: temperature → min/max
+    private final String id;
+    private final String companyDomain;
+    private final Map<String, Threshold> rules;
 
 }
