@@ -59,7 +59,13 @@ jobs:
               cd $COMPOSE_DIR
               
               # ① .env에 방금 빌드한 이미지 태그 기록
-              echo "TRANS_IMAGE_TAG=${{ env.TRANS_IMAGE_TAG }}" > .env
+              if grep -q '^TRANS_IMAGE_TAG=' .env; then
+               # 있으면 교체
+              sed -i "s|^TRANS_IMAGE_TAG=.*|TRANS_IMAGE_TAG=${{ env.TRANS_IMAGE_TAG }}|" .env
+              else
+              # 없으면 추가
+              echo "TRANS_IMAGE_TAG=${{ env.TRANS_IMAGE_TAG }}" >> .env
+              fi
               
               RUNNING=$(docker-compose ps -q $SERVICE_NAME)
               
