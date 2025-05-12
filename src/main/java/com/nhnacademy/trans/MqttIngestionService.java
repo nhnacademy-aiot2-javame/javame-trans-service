@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hivemq.client.mqtt.MqttClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
 import com.hivemq.client.mqtt.mqtt3.message.publish.Mqtt3Publish;
+import com.nhnacademy.trans.config.RuleCacheService;
 import com.nhnacademy.trans.domain.Threshold;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -28,7 +30,7 @@ public class MqttIngestionService {
 
     private final RuleEngine ruleEngine;
     private final InfluxDBService influxDBService;
-    private final ThresholdCacheManager thresholdCacheManager;
+    private final RuleCacheService ruleCacheService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private Mqtt3AsyncClient client;
@@ -63,7 +65,7 @@ public class MqttIngestionService {
             String topic = publish.getTopic().toString();
             String payload = StandardCharsets.UTF_8.decode(publish.getPayload().get()).toString();
 
-            log.info("topic: {}, payload: {}", topic, payload);
+            log.warn("topic: {}, payload: {}", topic, payload);
 
             // 데이터 타입 파싱
             String type = extractDataType(topic);
@@ -79,10 +81,11 @@ public class MqttIngestionService {
             }
 
             String sensorId = extractSensorId(topic);
-            Threshold threshold = thresholdCacheManager.getThreshold(type, companyDomain, sensorId);
+            log.warn("sensorId: {}", sensorId);
+            Optional<Threshold> threshold = ruleCacheService.getThreshold(type, companyDomain, sensorId);
             String sensorValue = payload.split(":")[2];
 
-            boolean isTriggered = ruleEngine.evaluate(sensorValue, threshold);
+            boolean isTriggered = ruleEngine.evaluate(sensorValue, threshold.orElse(null));
 
             if (isTriggered) {
                 log.warn("임계값 초과 알림: {}, value={}", type, sensorValue);
@@ -99,7 +102,7 @@ public class MqttIngestionService {
 
     private String extractSensorId(String topic) {
         // /g/ 다음으로 오는 문자열 '/' 전 까지 리턴
-        return topic.contains("/g/") ? topic.split("/g/")[1].split("/")[0] : "UNKNOWN";
+        return topic.contains("/d/") ? topic.split("/d/")[1].split("/")[0] : "UNKNOWN";
     }
 
 
