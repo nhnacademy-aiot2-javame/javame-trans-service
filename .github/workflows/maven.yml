@@ -67,15 +67,7 @@ jobs:
               echo "TRANS_IMAGE_TAG=${{ env.TRANS_IMAGE_TAG }}" >> .env
               fi
               
-              RUNNING=$(docker-compose ps -q $SERVICE_NAME)
-              
-              if [ -n "$RUNNING" ]; then
-                echo "$SERVICE_NAME is running → stop & rm & up only this service"
-                docker-compose stop $SERVICE_NAME
-                docker-compose rm -f $SERVICE_NAME
-                docker-compose up -d $SERVICE_NAME
-              else
-                echo "$SERVICE_NAME is not running → full restart"
-                docker-compose down
-                docker-compose up -d
-              fi
+              docker-compose stop $SERVICE_NAME
+              docker-compose rm -f $SERVICE_NAME
+              docker-compose up -d $SERVICE_NAME
+             
