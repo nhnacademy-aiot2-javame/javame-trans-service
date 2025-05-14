@@ -1,4 +1,4 @@
-package com.nhnacademy.trans;
+package com.nhnacademy.trans.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
