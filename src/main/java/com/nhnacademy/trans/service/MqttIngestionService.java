@@ -98,7 +98,6 @@ public class MqttIngestionService {
             String topic = publish.getTopic().toString();
             String payload = StandardCharsets.UTF_8.decode(publish.getPayload().get()).toString();
 
-            log.warn("topic: {}, payload: {}", topic, payload);
 
             // 데이터 타입 및 도메인 파싱
             String type = extractDataType(topic);
@@ -113,7 +112,6 @@ public class MqttIngestionService {
             }
 
             String sensorId = extractSensorId(topic);
-            log.warn("sensorId: {}", sensorId);
 
             Optional<Threshold> threshold = ruleCacheService.getThreshold(type, companyDomain, sensorId);
             String sensorValue = payload.split(":")[2];

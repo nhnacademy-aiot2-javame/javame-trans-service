@@ -12,6 +12,8 @@ import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 
 import com.influxdb.client.write.Point;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -32,6 +34,11 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public class InfluxDBService {
+
+    /***
+     * Logger.
+     */
+    private static final Logger log = LoggerFactory.getLogger(InfluxDBService.class);
 
     /***
      * url.
@@ -120,10 +127,12 @@ public class InfluxDBService {
             // 토픽 -> 태그 맵 변환
             String[] tokens = topic.split("/");
             Map<String, String> tags = new HashMap<>();
+            String whatData = tokens[0].equals("server_data") ? "server_data" : "sensor_data";
+            tags.put("origin", whatData);
             for (int i = 1; i < tokens.length - 1; i += 2) {
-                tags.put(tokens[i], tokens[i + 1]);
+                tags.put(getTokenName(tokens[i]), tokens[i + 1]);
             }
-            String measurement = tags.get("e");
+            String measurement = tags.get("measurement");
 
             // 단일 값 또는 복합 객체 처리
             if (valueNode.isObject()) {
@@ -136,7 +145,26 @@ public class InfluxDBService {
                 writeApi.writePoint(p);
             }
         } catch (Exception e) {
+            log.warn("Exception occurred while saving data", e);
         }
+    }
+
+    /**
+     * 태그 키(letter)로부터 변수명을 반환합니다.
+     * @param token 태그 식별자 (예: "s", "b", "p", "d", "n", "g", "e")
+     * @return 매핑된 변수명 또는 입력값이 매핑되지 않은 경우 원본 토큰
+     */
+    private String getTokenName(String token) {
+        return switch (token.trim()) {
+            case "s" -> "companyDomain";
+            case "b" -> "building";
+            case "p" -> "place";
+            case "d" -> "deviceId";
+            case "n" -> "location";
+            case "g" -> "gatewayId";
+            case "e" -> "measurement";
+            default -> token;
+        };
     }
 
     /**
