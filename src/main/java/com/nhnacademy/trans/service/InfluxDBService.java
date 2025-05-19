@@ -3,10 +3,13 @@ package com.nhnacademy.trans.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.influxdb.client.InfluxDBClient;
-import com.influxdb.client.WriteApiBlocking;
-import com.influxdb.client.domain.WritePrecision;
+import com.influxdb.client.WriteApi;
+import com.influxdb.client.WriteOptions;
 import com.influxdb.client.write.Point;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -24,37 +27,49 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class InfluxDBService {
 
+    private static final Logger log = LoggerFactory.getLogger(InfluxDBService.class);
     /**
      * InfluxDB 클라이언트
      */
     private final InfluxDBClient influxDBClient;
 
+    /***
+     * writeApi 비동기 방식.
+     */
+    private WriteApi writeApi;
+
     /**
-     * JSON 파싱을 위한 ObjectMapper
+     * JSON 파싱을 위한 ObjectMapper.
      */
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * 주어진 토픽과 JSON페이로드를 파싱하여 InfluxDB에 저장한다.
-     * <ol>
-     *   <li>payload를 JSON 트리로 읽어 시간(time)과 값(value)을 추출한다.</li>
-     *   <li>토픽 문자열을 슬래시로 분리하여 키-값 맵(String→String)으로 변환한다.</li>
-     *   <li>추출된 정보(companyDomain, building, place, deviceId, location, gatewayId, measurement, origin)를 태그로 설정한다.</li>
-     *   <li>value가 객체일 경우 각 필드별로 Point를 생성하여 writePoints()로 배치 저장한다.</li>
-     *   <li>value가 단일 숫자일 경우 하나의 Point를 생성하여 writePoint()로 저장한다.</li>
-     * </ol>
-     *
-     * @param topic   MQTT 토픽 문자열 (예: data/s/{companyDomain}/b/{building}/...)
-     * @param payload JSON 형식의 문자열 (예: {"time":1234567890, "value":{...}})
-     * @throws Exception 페이로드 파싱 또는 InfluxDB 저장 중 오류 발생 시
+     * Bean 초기화 완료 후 비동기 WriteApi 설정.
+     */
+    @PostConstruct
+    public void initWriteApi() {
+        this.writeApi = influxDBClient.makeWriteApi(
+                WriteOptions.builder()
+                        .batchSize(500)      // 500개 포인트마다 전송
+                        .flushInterval(2000) // 2초마다 플러시
+                        .retryInterval(3)    // 실패 시 3회 재시도
+                        .retryInterval(5000) // 재시도 간격 5초
+                        .build()
+        );
+    }
+
+    /**
+     * 주어진 토픽과 JSON 페이로드를 파싱하여 InfluxDB에 비동기 저장한다.
+     * @param topic   MQTT 토픽 문자열
+     * @param payload JSON 형식의 문자열
+     * @throws Exception 파싱 오류 발생 시
      */
     public void save(String topic, String payload) throws Exception {
-        // 1. payload JSON 파싱
         JsonNode root = objectMapper.readTree(payload);
         long time = root.get("time").asLong();
         JsonNode valueNode = root.get("value");
 
-        // 2. topic 동적 파싱 → 키-값 맵 변환
+        // 토픽 파싱
         String[] tokens = topic.split("/");
         Map<String, String> map = new HashMap<>();
         for (int i = 1; i < tokens.length - 1; i += 2) {
@@ -66,14 +81,11 @@ public class InfluxDBService {
         String place         = map.get("p");
         String deviceId      = map.get("d");
         String location      = map.get("n");
-        String gatewayId     = map.get("g");      // g가 없으면 null
-        String measurement   = map.get("e");      // 반드시 있어야 함
+        String gatewayId     = map.get("g");
+        String measurement   = map.get("e");
         String origin        = tokens[0].equals("data") ? "sensor_data" : "server_data";
 
-        // 3. Point 생성 및 쓰기
-        WriteApiBlocking writeApi = influxDBClient.getWriteApiBlocking();
         if (valueNode.isObject()) {
-            // 복합 필드 처리 (예: lora)
             List<Point> points = new ArrayList<>();
             valueNode.fields().forEachRemaining(entry -> {
                 Point p = Point.measurement(measurement)
@@ -83,20 +95,18 @@ public class InfluxDBService {
                         .addTag("device_id", deviceId)
                         .addTag("location", location)
                         .addTag("origin", origin);
-                if (gatewayId != null) {
-                    p.addTag("gatewayId", gatewayId);
-                }
+                if (gatewayId != null) p.addTag("gatewayId", gatewayId);
                 if (entry.getValue().isNumber()) {
                     p.addField(entry.getKey(), entry.getValue().asDouble());
                 } else {
                     p.addField(entry.getKey(), entry.getValue().asText());
                 }
-                p.time(Instant.ofEpochMilli(time), WritePrecision.MS);
+                p.time(Instant.ofEpochMilli(time), com.influxdb.client.domain.WritePrecision.MS);
                 points.add(p);
             });
             writeApi.writePoints(points);
+            log.debug("저장 완료");
         } else {
-            // 단일 값 처리 (예: temperature, humidity)
             double value = valueNode.asDouble();
             Point p = Point.measurement(measurement)
                     .addTag("companyDomain", companyDomain)
@@ -105,12 +115,12 @@ public class InfluxDBService {
                     .addTag("device_id", deviceId)
                     .addTag("location", location)
                     .addTag("origin", origin);
-            if (gatewayId != null) {
-                p.addTag("gatewayId", gatewayId);
-            }
+            if (gatewayId != null) p.addTag("gatewayId", gatewayId);
             p.addField("value", value)
-                    .time(Instant.ofEpochMilli(time), WritePrecision.MS);
+                    .time(Instant.ofEpochMilli(time), com.influxdb.client.domain.WritePrecision.MS);
             writeApi.writePoint(p);
+            log.debug("저장 완료");
         }
     }
+
 }
