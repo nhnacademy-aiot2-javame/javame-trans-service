@@ -1,9 +1,10 @@
 package com.nhnacademy.trans;
 
-import com.nhnacademy.trans.domain.SensorData;
 import com.nhnacademy.trans.domain.Threshold;
-import org.springframework.stereotype.Component;
 
+/**
+ * Rule-engine 인터페이스.
+ */
 public interface RuleEngine {
     boolean evaluate(String data, Threshold threshold);
 }
