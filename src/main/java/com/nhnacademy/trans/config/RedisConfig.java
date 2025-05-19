@@ -82,8 +82,10 @@ public class RedisConfig {
         }
         cfg.setPassword(RedisPassword.of(redisPassword));
 
-        // 2) LettuceConnectionFactory 생성
-        return new LettuceConnectionFactory(cfg);
+        // 2) LettuceConnectionFactory 생성 & 초기화
+        LettuceConnectionFactory factory = new LettuceConnectionFactory(cfg);
+        factory.afterPropertiesSet();   // ← 이 한 줄 추가!
+        return factory;
     }
 
     /**
@@ -102,6 +104,7 @@ public class RedisConfig {
         tpl.setHashKeySerializer(new StringRedisSerializer());
         tpl.setValueSerializer(new GenericJackson2JsonRedisSerializer());
         tpl.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
+        tpl.afterPropertiesSet();
         return tpl;
     }
 }

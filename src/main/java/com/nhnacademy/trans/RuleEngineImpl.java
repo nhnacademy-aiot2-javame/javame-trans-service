@@ -27,7 +27,7 @@ public class RuleEngineImpl implements RuleEngine {
      */
     @Override
     public boolean evaluate(String data, Threshold threshold) {
-        log.warn("RuleEngineImpl: evaluate - data={}, threshold={}", data, threshold);
+        log.warn("RuleEngineImpl: evaluate - data={} , threshold={}", data, threshold);
         if (threshold == null) {
             // 임계값 정보가 없으면 평가하지 않음
             return false;
