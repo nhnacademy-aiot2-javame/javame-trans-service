@@ -2,21 +2,22 @@ package com.nhnacademy.trans.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.influxdb.client.InfluxDBClient;
+import com.influxdb.client.InfluxDBClientFactory;
+import com.influxdb.client.WriteApi;
+import com.influxdb.client.WriteOptions;
+import com.influxdb.client.domain.WritePrecision;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import okhttp3.OkHttpClient;
-import org.influxdb.InfluxDB;
-import org.influxdb.InfluxDBFactory;
-import org.influxdb.dto.Point;
-import org.influxdb.dto.BatchPoints;
-import org.influxdb.dto.Pong;
+
+import com.influxdb.client.write.Point;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 /**
  * {@code InfluxDBService}는 MQTT로 전달된 토픽과 JSON 페이로드를
@@ -29,7 +30,6 @@ import java.util.concurrent.TimeUnit;
  * @since 1.0
  */
 @Service
-@Slf4j
 @RequiredArgsConstructor
 public class InfluxDBService {
 
@@ -42,20 +42,20 @@ public class InfluxDBService {
     /***
      * url.
      */
-    @Value("${influx.token:}")
+    @Value("${influx.token}")
     private String token;
 
     /***
      * url.
      */
     @Value("${influx.org}")
-    private String database;
+    private String org;
 
     /***
      * url.
      */
-    @Value("${influx.retention:autogen}")
-    private String retention;
+    @Value("${influx.bucket}")
+    private String bucket;
 
     /***
      * url.
@@ -65,26 +65,37 @@ public class InfluxDBService {
     /***
      * url.
      */
-    private InfluxDB influxDB;
+    private InfluxDBClient influxDBClient;
+
+    /***
+     * writeAPI.
+     */
+    private WriteApi writeApi;
 
     /**
      * Bean 초기화 후 InfluxDB 클라이언트를 설정 및 연결 검증.
      */
     @PostConstruct
     public void init() {
-        // 짧은 타임아웃을 가진 OkHttpClient.Builder 생성
-        OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder()
-                .connectTimeout(5, TimeUnit.SECONDS)
-                .readTimeout(5, TimeUnit.SECONDS)
-                .writeTimeout(5, TimeUnit.SECONDS);
+        this.influxDBClient = InfluxDBClientFactory.create(url,token.toCharArray(),org,bucket);
 
-        // 클라이언트 생성: Builder를 넘겨야 합니다
-        this.influxDB = InfluxDBFactory.connect(url, "javame", token, clientBuilder);
-        influxDB.setDatabase(database);
-        influxDB.setRetentionPolicy(retention);
-        // 비동기 배치 쓰기 활성화
-        influxDB.enableBatch();
-        log.info("InfluxDB client initialized (db={}, retention={})", database, retention);
+        WriteOptions options = WriteOptions.builder()
+                .batchSize(500)
+                .flushInterval(2000)
+                .retryInterval(3)
+                .retryInterval(5000)
+                .build();
+        this.writeApi = influxDBClient.makeWriteApi(options);
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        if (writeApi != null) {
+            writeApi.close();
+        }
+        if (influxDBClient != null) {
+            influxDBClient.close();
+        }
     }
 
 
@@ -114,28 +125,17 @@ public class InfluxDBService {
             }
             String measurement = tags.get("e");
 
-            // BatchPoints 생성
-            BatchPoints batch = BatchPoints
-                    .database(database)
-                    .retentionPolicy(retention)
-                    .build();
-
-            // value가 객체인지 단일 값인지 분기 처리
+            // 단일 값 또는 복합 객체 처리
             if (valueNode.isObject()) {
                 valueNode.fields().forEachRemaining(entry -> {
-                    Point point = createPoint(measurement, tags, entry.getKey(), entry.getValue(), time);
-                    batch.point(point);
+                    Point p = buildPoint(measurement, tags, entry.getKey(), entry.getValue(), time);
+                    writeApi.writePoint(p);
                 });
             } else {
-                Point point = createPoint(measurement, tags, "value", valueNode, time);
-                batch.point(point);
+                Point p = buildPoint(measurement, tags, "value", valueNode, time);
+                writeApi.writePoint(p);
             }
-
-            // InfluxDB에 배치 쓰기
-            influxDB.write(batch);
-
         } catch (Exception e) {
-            log.error("Failed to write to InfluxDB for topic {}", topic, e);
         }
     }
 
@@ -149,25 +149,16 @@ public class InfluxDBService {
      * @param timestamp   타임스탬프(ms)
      * @return Point 인스턴스
      */
-    private Point createPoint(
+    private Point buildPoint(
             String measurement,
             Map<String, String> tags,
             String fieldKey,
             JsonNode fieldValue,
             long timestamp
     ) {
-        Point.Builder builder = Point.measurement(measurement)
-                .time(timestamp, TimeUnit.MILLISECONDS);
-
-        // 태그 추가
-        tags.forEach(builder::tag);
-        // 필드 추가
-        if (fieldValue.isNumber()) {
-            builder.addField(fieldKey, fieldValue.asDouble());
-        } else {
-            builder.addField(fieldKey, fieldValue.asText());
-        }
-
-        return builder.build();
+        return Point.measurement(measurement)
+                .addTags(tags)
+                .addField(fieldKey, fieldValue.asDouble())
+                .time(Instant.ofEpochMilli(timestamp), WritePrecision.MS);
     }
 }
