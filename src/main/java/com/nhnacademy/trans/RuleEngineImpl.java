@@ -1,8 +1,7 @@
 package com.nhnacademy.trans;
 
 import com.nhnacademy.trans.domain.Threshold;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
@@ -12,8 +11,8 @@ import org.springframework.stereotype.Component;
  * 임계값 초과 여부를 판단한다.
  */
 @Component
+@Slf4j
 public class RuleEngineImpl implements RuleEngine {
-    private static final Logger log = LoggerFactory.getLogger(RuleEngineImpl.class);
 
     /**
      * 주어진 데이터 값과 임계값을 비교하여 임계값 초과 여부를 반환한다.

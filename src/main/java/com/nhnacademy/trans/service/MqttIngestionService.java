@@ -17,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+
 /**
  * MQTT로 수신된 센서 데이터를 처리하고 InfluxDB에 저장하거나 임계값 초과 시 알림을 수행하는 서비스.
  * <p>
@@ -30,11 +31,15 @@ import java.util.Optional;
 @Slf4j
 public class MqttIngestionService {
 
-    /** MQTT 브로커 포트 */
+    /**
+     * MQTT 브로커 포트.
+     * */
     @Value("${mqtt.port}")
     private int port;
 
-    /** MQTT 서버 호스트 */
+    /**
+     * MQTT 서버 호스트.
+     * */
     @Value("${mqtt.serverHost}")
     private String serverHost;
 
@@ -42,10 +47,10 @@ public class MqttIngestionService {
     private final InfluxDBService influxDBService;
     private final RuleCacheService ruleCacheService;
 
-    /** JSON 파싱을 위한 ObjectMapper */
+    /** JSON 파싱을 위한 ObjectMapper. */
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    /** 비동기 MQTT 클라이언트 */
+    /** 비동기 MQTT 클라이언트. */
     private Mqtt3AsyncClient client;
 
     /**

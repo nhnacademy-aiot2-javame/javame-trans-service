@@ -11,52 +11,69 @@ import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactor
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+
 /**
- * Redis 설정 클래스.
- * <p>Spring Data Redis를 사용하기 위한 Lettuce 기반의
- * RedisConnectionFactory 및 RedisTemplate<String, Threshold> 빈을 등록한다.
+ * Redis 연결 및 RedisTemplate 설정을 제공하는 Configuration 클래스.
+ * <p>Spring Data Redis를 사용하기 위한
+ * <p>RedisConnectionFactory와<p>
+ * RedisTemplate&lt;String, Threshold&gt; 빈을 정의한다.
  */
 @Configuration
 public class RedisConfig {
 
     /**
-     * Redis 서버 호스트 주소
+     * Redis 서버 호스트 주소.
+     * <p>application.properties 또는 application.yml의
+     * <code>spring.data.redis.host</code> 값을 주입받는다.
      */
     @Value("${spring.data.redis.host}")
     private String redisHost;
 
     /**
-     * Redis 서버 포트
+     * Redis 서버 포트 번호.
+     * <p>application.properties 또는 application.yml의
+     * <code>spring.data.redis.port</code> 값을 주입받는다.
      */
     @Value("${spring.data.redis.port}")
     private int redisPort;
 
     /**
-     * Redis 사용자 이름 (ACL 모드 사용 시)
+     * Redis ACL 모드용 사용자명.
+     * <p>application.properties 또는 application.yml의
+     * <code>spring.data.redis.username</code> 값을 주입받는다.
+     * 기본값이 빈 문자열("")일 수 있다.
      */
     @Value("${spring.data.redis.username:}")
     private String redisUsername;
 
     /**
-     * Redis 비밀번호
+     * Redis 비밀번호.
+     * <p>application.properties 또는 application.yml의
+     * <code>spring.data.redis.password</code> 값을 주입받는다.
      */
     @Value("${spring.data.redis.password}")
     private String redisPassword;
 
     /**
-     * Redis 데이터베이스 인덱스
+     * 사용할 Redis 데이터베이스 인덱스.
+     * <p>application.properties 또는 application.yml의
+     * <code>spring.data.redis.database</code> 값을 주입받는다.
      */
     @Value("${spring.data.redis.database}")
     private int redisDatabase;
 
+
     /**
      * RedisConnectionFactory 빈을 생성한다.
-     * <p>Stand-alone 모드로 설정된 Redis 서버에 연결하기 위한 LettuceConnectionFactory를 반환한다.
+     * <p>spring.data.redis.host, port, database, (선택)username, password 프로퍼티를 기반으로
+     * {@link RedisStandaloneConfiguration}을 구성하고, 이를 이용한
+     * {@link LettuceConnectionFactory}를 반환한다.
      *
-     * @return LettuceConnectionFactory 인스턴스
+     * @return Lettuce 기반의 RedisConnectionFactory
      */
     @Bean
     public RedisConnectionFactory redisConnectionFactory() {
+        // 1) standalone 설정: 호스트/포트, DB 인덱스, (선택) 사용자·비밀번호
         RedisStandaloneConfiguration cfg =
                 new RedisStandaloneConfiguration(redisHost, redisPort);
         cfg.setDatabase(redisDatabase);
@@ -65,15 +82,17 @@ public class RedisConfig {
         }
         cfg.setPassword(RedisPassword.of(redisPassword));
 
+        // 2) LettuceConnectionFactory 생성
         return new LettuceConnectionFactory(cfg);
     }
 
     /**
-     * RedisTemplate<String, Threshold> 빈을 생성한다.
-     * <p>키는 String, 값은 JSON 직렬화를 사용하는 Threshold 객체로 설정한다.
+     * RedisTemplate&lt;String, Threshold&gt; 빈을 생성한다.
+     * <p>키와 해시 키에는 {@link StringRedisSerializer}를 사용하고,
+     * 값과 해시 값에는 {@link GenericJackson2JsonRedisSerializer}를 사용하도록 설정한다.
      *
-     * @param cf RedisConnectionFactory
-     * @return RedisTemplate<String, Threshold> 인스턴스
+     * @param cf RedisConnectionFactory 빈
+     * @return 제네릭 Jackson2 JSON 직렬화가 적용된 RedisTemplate&lt;String, Threshold&gt;
      */
     @Bean
     public RedisTemplate<String, Threshold> redisTemplate(RedisConnectionFactory cf) {
