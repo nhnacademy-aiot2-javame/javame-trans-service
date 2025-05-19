@@ -18,11 +18,19 @@ import java.util.function.Supplier;
 @RequiredArgsConstructor
 public class RuleCacheService {
 
+    /**
+     * RedisTemplate 의존성 주입
+     */
     private final RedisTemplate<String, Threshold> redisTemplate;
+
+    /**
+     * Javame-Rule-Api 를 @FeignClient 로 가져옴
+     */
     private final RuleAdaptor ruleAdaptor;
 
     /**
      * MySQL에서 센서 및 서버 룰을 모두 가져와 Redis에 저장
+     * <code>fetchRules</code>
      */
     public void reloadAllRules() {
         List<RuleCache> sensorRules = fetchRules(ruleAdaptor::findAllSensorData);
@@ -34,6 +42,7 @@ public class RuleCacheService {
 
     /**
      * Feign 호출 및 응답 검증
+     * @param supplier 다른 메서드의 중복 코드를 일괄 처리하는 인터페이스
      */
     private List<RuleCache> fetchRules(Supplier<ResponseEntity<List<RuleCache>>> supplier) {
         ResponseEntity<List<RuleCache>> response = supplier.get();
@@ -45,6 +54,7 @@ public class RuleCacheService {
 
     /**
      * Redis에 룰 저장 (키 패턴: rule:{domain}:{id})
+     * @param rules : 각 센서나 서버 measurement 의 임계값
      */
     private void cacheRules(List<RuleCache> rules) {
         for (RuleCache ruleCache : rules) {
@@ -57,7 +67,7 @@ public class RuleCacheService {
     }
 
     /**
-     * Redis에서 룰 전체 조회
+     * Redis 에서 룰 전체 조회
      * @param type   룰 맵의 키(예: "temperature", "humidity")
      * @param domain companyDomain
      * @param id     sensorId 또는 serverId
@@ -69,7 +79,7 @@ public class RuleCacheService {
     }
 
     /**
-     * Redis에서 특정 룰(Threshold) 조회
+     * Redis 에서 특정 룰(Threshold) 조회
      * @param type   룰 맵의 키(예: "temperature", "humidity")
      * @param domain companyDomain
      * @param id     sensorId 또는 serverId

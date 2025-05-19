@@ -35,11 +35,9 @@ class RuleCacheServiceTest {
 
     @Test
     void testReloadAllRules_success() {
-        // stub RedisTemplate.opsForHash()
-        var hashOps = mock(org.springframework.data.redis.core.HashOperations.class);
+        var hashOps = mock(HashOperations.class);
         when(redisTemplate.opsForHash()).thenReturn(hashOps);
 
-        // given: sensor & server rule caches
         Map<String, Threshold> sensorRulesMap = new HashMap<>();
         sensorRulesMap.put("temp", new Threshold(0, 100));
         RuleCache sensorCache = new RuleCache("sensor1", "domain1", sensorRulesMap);
@@ -53,10 +51,9 @@ class RuleCacheServiceTest {
         when(ruleAdaptor.findAllServerData())
                 .thenReturn(ResponseEntity.ok(List.of(serverCache)));
 
-        // when
+
         ruleCacheService.reloadAllRules();
 
-        // then: verify putAll calls
         verify(hashOps).putAll("rule:domain1:sensor1", sensorRulesMap);
         verify(hashOps).putAll("rule:domain2:server1", serverRulesMap);
     }
